@@ -53,30 +53,102 @@ public class Matrix {
         return res;
     }
     public static Complex opr(Matrix a) {
-        if (a.rows != 2 || a.cols != 2) {
-            System.out.println("Ошибка! В этой простой версии определитель считается только для 2х2!");
+        if (a.rows != a.cols) {
+            System.out.println("Ошибка! Определитель можно вычислить только для квадратной матрицы!");
             return null;
         }
-        Complex ch1 = a.arr[0][0].umnC(a.arr[1][1]);
-        Complex ch2 = a.arr[0][1].umnC(a.arr[1][0]);
-        return ch1.minusC(ch2);
+        return computeDet(a.arr);
+    }
+    private static Complex computeDet(Complex[][] data) {
+        int n = data.length;
+        if (n == 1) {
+            return data[0][0];
+        }
+        if (n == 2) {
+            Complex ch1 = data[0][0].umnC(data[1][1]);
+            Complex ch2 = data[0][1].umnC(data[1][0]);
+            return ch1.minusC(ch2);
+        }
+        Complex det = new Complex(0, 0);
+        for (int j = 0; j < n; j++) {
+            Complex[][] sub = getSubMatrix(data, 0, j);
+            Complex subDet = computeDet(sub);
+            Complex term = data[0][j].umnC(subDet);
+            if (j % 2 == 1) {
+                det = det.minusC(term);
+            } else {
+                det = det.plusC(term);
+            }
+        }
+        return det;
+    }
+    private static Complex[][] getSubMatrix(Complex[][] data, int rowToExclude, int colToExclude) {
+        int n = data.length;
+        Complex[][] sub = new Complex[n - 1][n - 1];
+        int r = -1;
+        for (int i = 0; i < n; i++) {
+            if (i == rowToExclude) continue;
+            r++;
+            int c = -1;
+            for (int j = 0; j < n; j++) {
+                if (j == colToExclude) continue;
+                c++;
+                sub[r][c] = data[i][j];
+            }
+        }
+        return sub;
+    }
+    public static Matrix inverse(Matrix a) {
+        if (a.rows != a.cols) {
+            System.out.println("Ошибка! Обратную матрицу можно найти только для квадратной матрицы!");
+            return null;
+        }
+        Complex det = opr(a);
+        if (det.re == 0 && det.im == 0) {
+            System.out.println("Ошибка! Определитель равен 0, обратной матрицы не существует!");
+            return null;
+        }
+
+        int n = a.rows;
+        Matrix adj = new Matrix(n, n);
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                Complex[][] sub = getSubMatrix(a.arr, i, j);
+                Complex cofactor = computeDet(sub);
+                if ((i + j) % 2 == 1) {
+                    cofactor = new Complex(0, 0).minusC(cofactor);
+                }
+                adj.arr[i][j] = cofactor;
+            }
+        }
+        Matrix adjT = transponirovanie(adj);
+        Matrix inv = new Matrix(n, n);
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                inv.arr[i][j] = adjT.arr[i][j].delC(det);
+            }
+        }
+        return inv;
     }
     public static Matrix delenie(Matrix a, Matrix b) {
-        if (b.rows != 2 || b.cols != 2) {
-            System.out.println("Ошибка! Деление доступно только для матриц делителей размера 2х2!");
+        if (b.rows != b.cols) {
+            System.out.println("Ошибка! Матрица-делитель Б должна быть квадратной!");
             return null;
         }
-        Complex det = opr(b);
-        if (det.re == 0 && det.im == 0) {
-            System.out.println("Ошибка! Определитель делителя равен 0, делить нельзя!");
+        if (a.cols != b.rows) {
+            System.out.println("Ошибка! Размеры несовместимы для умножения на обратную матрицу!");
             return null;
         }
-        Matrix obrB = new Matrix(2, 2);
-        obrB.arr[0][0] = b.arr[1][1].delC(det);
-        obrB.arr[1][1] = b.arr[0][0].delC(det);
-        Complex min1 = new Complex(-1, 0);
-        obrB.arr[0][1] = b.arr[0][1].umnC(min1).delC(det);
-        obrB.arr[1][0] = b.arr[1][0].umnC(min1).delC(det);
+        Matrix obrB = inverse(b);
+        if (obrB == null) return null;
         return umnozhenie(a, obrB);
+    }
+    public void pechat() {
+        for (int i = 0; i < this.rows; i++) {
+            for (int j = 0; j < this.cols; j++) {
+                System.out.print("(" + this.arr[i][j].re + " + " + this.arr[i][j].im + "i)\t");
+            }
+            System.out.println();
+        }
     }
 }
